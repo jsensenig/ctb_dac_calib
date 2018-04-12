@@ -18,8 +18,6 @@ extern "C" {
 #include <bitset>
 
 #include <dacsetup.h>
-//#include <json.hpp>
-//#include <gpio2.h>
 
 #include <stdint.h>
 #include <sys/ioctl.h>
@@ -40,10 +38,7 @@ extern "C" {
 
 #define COUNT 5000
 
-//using json = nlohmann::json;
-
 I2C* dacsetup;
-//GPIO2* gpiosetup;
 
 
 int g_mem_fd;
@@ -94,7 +89,7 @@ void Xil_Out32(uint32_t OutAddress, uint32_t Value) {
 }
 
 
-int MapDacs(std::ofstream &dacmap, bool debug) {
+int MapDacs(std::ofstream &dacmap, int check_interval, uint16_t baseline, bool debug) {
 
           dacmap << "DAC " << "Channel " << "Ticks " << "Freq " << std::endl;
           dacmap << "++++++++++++++++++++++++++++++++++++++++++++++++++++++" << std::endl;
@@ -148,8 +143,6 @@ int MapDacs(std::ofstream &dacmap, bool debug) {
           std::cout << "  Mask: " << std::bitset<24>(mask) << std::endl;
           std::cout << "[Channel:DAC] [" << channel << ":" << dac << "]  " << std::flush;
 
-	  uint16_t baseline = 2300; //Baseline ~2048 ticks (1.65V) 
-	  //uint16_t baseline = 1800; //Starting from the "bottom" of signal
           for (int j=0; j<100; j++) {
 
             std::cout << "#" << std::flush;
@@ -168,7 +161,7 @@ int MapDacs(std::ofstream &dacmap, bool debug) {
             usleep(1200*1000);
             uint32_t count = Xil_In32((uint32_t)mmapaddr1 + GPIO_1_CH1_OFFSET);
                                                                                             
-            dacmap << dac << " " << channel << " " << value << " " << count*2 << std::endl;
+            dacmap << dac << " " << channel << " " << value << " " << count*check_interval << std::endl;
             
 	  }  //tick loop
 
@@ -215,6 +208,9 @@ int main() {
 */
   dacmap.open("dac_map.txt");
 
+  int check_interval = 2; //times/sec the freq. count is checked (set in FW)
+  uint32_t baseline = 2300; //Scan start point in ADC ticks
+
   std::vector<uint32_t> dacrst (24);
   printf("Setting all DAC channels to 0 \n");
   printf("============================================= \n");
@@ -223,7 +219,10 @@ int main() {
      return 1;
   }
 
-  if (MapDacs(dacmap, false)) {
+  std::cout << "Starting the DAC level mapping " << std::endl;
+  std::cout << "Times/sec Freq. is checked: " << check_interval << "Start point (ADC ticks): " baseline << std::endl;
+
+  if (MapDacs(dacmap, check_interval, baseline, false)) {
      printf("Failed R/W test. \n");
      return 1;
   }

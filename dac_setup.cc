@@ -18,9 +18,7 @@ extern "C" {
 #include <vector>
 
 #include <dacsetup.h>
-#include <json.hpp>
 
-//using namespace std;
 using json = nlohmann::json;
 
 I2C::I2C() {
